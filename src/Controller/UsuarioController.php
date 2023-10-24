@@ -17,7 +17,9 @@ class UsuarioController extends AbstractController
   {
     $usuario = new Usuario();
     $usuario->setNombre($request->request->get('nombre'));
-    $usuario->setEdad($request->request->get('edad'));
+    if (($request->request->get('edad')) >= 0){
+    $usuario->setEdad($request->request->get('edad'));}
+    else{return $this->json(['error'=>'Laedad tiene que ser mayor a 0.']);}
     // Se avisa a Doctrine que queremos guardar un nuevo registro pero no se ejecutan las consultas
     $entityManager->persist($usuario);
 
@@ -82,6 +84,9 @@ class UsuarioController extends AbstractController
     // Si no envia uno responde con un error 422
     if ($nombre == null || $edad == null){
       return $this->json(['error'=>'Se debe enviar el nombre y edad del usuario.'], 422);
+    }
+    if ($edad < 0 ){
+      return $this->json(['error'=>'La edad tiene que ser mayor a 0.'], 422);
     }
 
     // Se actualizan los datos a la entidad

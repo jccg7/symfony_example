@@ -20,7 +20,7 @@ class Direccion
     private ?string $municipio = null;
 
     #[ORM\Column(length: 255)]
-    private ?string $direccion = null;
+    private ?string $direction = null;
 
     #[ORM\ManyToOne(inversedBy: 'direcciones')]
     #[ORM\JoinColumn(nullable: false)]
@@ -55,14 +55,14 @@ class Direccion
         return $this;
     }
 
-    public function getDireccion(): ?string
+    public function getDirection(): ?string
     {
-        return $this->direccion;
+        return $this->direction;
     }
 
-    public function setDireccion(string $direccion): static
+    public function setDirection(string $direction): static
     {
-        $this->direccion = $direccion;
+        $this->direction = $direction;
 
         return $this;
     }
