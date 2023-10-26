@@ -2,7 +2,9 @@
 
 namespace App\Repository;
 
+use Doctrine\ORM\Tools\Pagination\Paginator;
 use App\Entity\Producto;
+use App\Utils\Functions;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -45,4 +47,17 @@ class ProductoRepository extends ServiceEntityRepository
 //            ->getOneOrNullResult()
 //        ;
 //    }
+
+public function findAllWithPagination(int $currentPage, int $limit): Paginator
+    {
+      // Creamos nuestra query
+      $query = $this->createQueryBuilder('p')
+      ->getQuery();
+
+      // Creamos un paginator con la funcion paginate
+      $paginator = Functions::paginate($query, $currentPage, $limit);
+
+      return $paginator;
+    }
+
 }

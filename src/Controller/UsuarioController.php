@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Service\GeneradorDeMensajes;
 use App\Entity\Usuario;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -12,29 +13,11 @@ use Symfony\Component\Routing\Annotation\Route;
 #[Route('/usuario', name: 'usuarios')]
 class UsuarioController extends AbstractController
 {
-  #[Route('', name: 'app_usuario_create', methods: ['POST'])]
-  public function create(EntityManagerInterface $entityManager, Request $request): JsonResponse
+
+  #[Route('/comienza_con_A', name: 'app_comieza_con_a', methods: ['GET'])]
+  public function readComiezaConA(EntityManagerInterface $entityManager, Request $request): JsonResponse
   {
-    $usuario = new Usuario();
-    $usuario->setNombre($request->request->get('nombre'));
-    if (($request->request->get('edad')) >= 0){
-    $usuario->setEdad($request->request->get('edad'));}
-    else{return $this->json(['error'=>'Laedad tiene que ser mayor a 0.']);}
-    // Se avisa a Doctrine que queremos guardar un nuevo registro pero no se ejecutan las consultas
-    $entityManager->persist($usuario);
-
-    // Se ejecutan las consultas SQL para guardar el nuevo registro
-    $entityManager->flush();
-
-    return $this->json([
-        'message' => 'Se guardo el nuevo usuario con id ' . $usuario->getId()
-    ]); 
-  }
-
-  #[Route('', name: 'app_usuario_read_all', methods: ['GET'])]
-  public function readAll(EntityManagerInterface $entityManager): JsonResponse
-  {
-    $usuarios = $entityManager->getRepository(Usuario::class)->findAll();
+    $usuarios = $entityManager->getRepository(Usuario::class)->findUsuariosQueEmpiecenConA();
 
     $data = [];
   
@@ -46,16 +29,72 @@ class UsuarioController extends AbstractController
         ];
     }
     
-    return $this->json($data); 
+    return $this->json(['data' => $data] ); 
+  }
+
+  #[Route('/{id}', name: 'getUsuario', methods: ['get'])]
+  public function getUsuario(int $id): JsonResponse
+  {
+    // Este codigo simula una busqueda
+    $usuario = ["id"=>$id, "nombre"=>"Juan", "edad"=>30];
+
+    return $this->json($usuario);
+  }
+
+  #[Route('', name: 'app_usuario_create', methods: ['POST'])]
+  public function create(EntityManagerInterface $entityManager, Request $request, GeneradorDeMensajes $generadorDeMensajes): JsonResponse
+  {
+    $usuario = new Usuario();
+    $usuario->setNombre($request->request->get('nombre'));
+    if (($request->request->get('edad')) >= 0){
+    $usuario->setEdad($request->request->get('edad'));}
+    else{return $this->json(['error'=>'La edad tiene que ser mayor o igual 0.']);}
+    // Se avisa a Doctrine que queremos guardar un nuevo registro pero no se ejecutan las consultas
+    $entityManager->persist($usuario);
+
+    // Se ejecutan las consultas SQL para guardar el nuevo registro
+    $entityManager->flush();
+
+    return $this->json([
+        'message' => $generadorDeMensajes->getMensaje() .'Se guardo el nuevo usuario con id ' . $usuario->getId()
+    ]); 
+  }
+
+  #[Route('', name: 'app_usuario_read_all', methods: ['GET'])]
+  public function readAll(EntityManagerInterface $entityManager, Request $request): JsonResponse
+  {
+    $repositorio = $entityManager->getRepository(Usuario::class);
+
+    $limit = $request->get('limit', 5);
+
+    $page = $request->get('page', 1);
+
+    $usuarios = $repositorio->findAllWithPagination($page, $limit);
+
+    $total = $usuarios->count();
+
+    $lastPage = (int) ceil($total/$limit);
+
+    $data = [];
+  
+    foreach ($usuarios as $usuario) {
+        $data[] = [
+            'id' => $usuario->getId(),
+            'nombre' => $usuario->getNombre(),
+            'edad' => $usuario->getEdad(),
+        ];
+    }
+    
+    return $this->json(['data' => $data, 'total' => $total, 'lastPage'=> $lastPage] ); 
   }
 
   #[Route('/{id}', name: 'app_usuario_read_one', methods: ['GET'])]
-  public function readOne(EntityManagerInterface $entityManager, int $id): JsonResponse
+  public function readOne(EntityManagerInterface $entityManager, int $id, GeneradorDeMensajes $generadorDeMensajes): JsonResponse
   {
     $usuario = $entityManager->getRepository(Usuario::class)->find($id);
 
     if(!$usuario){
-      return $this->json(['error'=>'No se encontro el usuario.'], 404);
+      return $this->json(['error'=> $generadorDeMensajes->getMensaje() .'No se encontro el usuario.'], 404);
     }
 
     return $this->json([
@@ -66,7 +105,7 @@ class UsuarioController extends AbstractController
   }
 
   #[Route('/{id}', name: 'app_usuario_edit', methods: ['PUT'])]
-  public function update(EntityManagerInterface $entityManager, int $id, Request $request): JsonResponse
+  public function update(EntityManagerInterface $entityManager, int $id, Request $request, GeneradorDeMensajes $generadorDeMensajes): JsonResponse
   {
 
     // Busca el usuario por id
@@ -74,7 +113,7 @@ class UsuarioController extends AbstractController
 
     // Si no lo encuentra responde con un error 404
     if (!$usuario) {
-      return $this->json(['error'=>'No se encontro el usuario con id: '.$id], 404);
+      return $this->json(['error'=> $generadorDeMensajes->getMensaje() .'No se encontro el usuario con id: '.$id], 404);
     }
 
     // Obtiene los valores del body de la request
@@ -98,11 +137,11 @@ class UsuarioController extends AbstractController
     // Se aplican los cambios de la entidad en la bd
     $entityManager->flush();
 
-    return $this->json(['message'=>'Se actualizaron los datos del usuario.', 'data' => $data]);
+    return $this->json(['message'=> $generadorDeMensajes->getMensaje() .'Se actualizaron los datos del usuario.', 'data' => $data]);
   }
 
   #[Route('/{id}', name: 'app_usuario_delete', methods: ['DELETE'])]
-  public function delete(EntityManagerInterface $entityManager, int $id, Request $request): JsonResponse
+  public function delete(EntityManagerInterface $entityManager, int $id, Request $request, GeneradorDeMensajes $generadorDeMensajes): JsonResponse
   {
 
     // Busca el usuario por id
@@ -110,7 +149,7 @@ class UsuarioController extends AbstractController
 
     // Si no lo encuentra responde con un error 404
     if (!$usuario) {
-      return $this->json(['error'=>'No se encontro el usuario con id: '.$id], 404);
+      return $this->json(['error'=> $generadorDeMensajes->getMensaje() .'No se encontro el usuario con id: '.$id], 404);
     }
 
     // Remueve la entidad
@@ -121,6 +160,6 @@ class UsuarioController extends AbstractController
     // Se aplican los cambios de la entidad en la bd
     $entityManager->flush();
 
-    return $this->json(['message'=>'Se elimino el usuario.', 'data' => $data]);
+    return $this->json(['message'=> $generadorDeMensajes->getMensaje() .'Se elimino el usuario.', 'data' => $data]);
   }
 }

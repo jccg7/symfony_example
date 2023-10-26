@@ -2,6 +2,8 @@
 
 namespace App\Repository;
 
+use Doctrine\ORM\Tools\Pagination\Paginator;
+use App\Utils\Functions;
 use App\Entity\Usuario;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -45,4 +47,25 @@ class UsuarioRepository extends ServiceEntityRepository
 //            ->getOneOrNullResult()
 //        ;
 //    }
+     public function findUsuariosQueEmpiecenConA(): array
+    {
+        return $this->createQueryBuilder('u')
+            ->andWhere('(substr(u.nombre, 0, 1)) == "A"')
+            ->getQuery()
+            ->getResult()
+        ;
+    }
+    
+    public function findAllWithPagination(int $currentPage, int $limit): Paginator
+    {
+      // Creamos nuestra query
+      $query = $this->createQueryBuilder('p')
+      ->getQuery();
+
+      // Creamos un paginator con la funcion paginate
+      $paginator = Functions::paginate($query, $currentPage, $limit);
+
+      return $paginator;
+    }
+
 }
